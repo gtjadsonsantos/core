@@ -3,6 +3,7 @@
 import pytest
 
 from homeassistant import config_entries
+from homeassistant.components.waze_travel_time.config_flow import WazeConfigFlow
 from homeassistant.components.waze_travel_time.const import (
     CONF_AVOID_FERRIES,
     CONF_AVOID_SUBSCRIPTION_ROADS,
@@ -53,12 +54,52 @@ async def test_minimum_fields(hass: HomeAssistant) -> None:
     }
 
 
+@pytest.mark.usefixtures("mock_update")
+async def test_reconfigure(hass: HomeAssistant) -> None:
+    """Test reconfigure flow."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data=MOCK_CONFIG,
+        options=DEFAULT_OPTIONS,
+        version=WazeConfigFlow.VERSION,
+    )
+    entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    reconfigure_result = await entry.start_reconfigure_flow(hass)
+    assert reconfigure_result["type"] is FlowResultType.FORM
+    assert reconfigure_result["step_id"] == "user"
+
+    user_step_result = await hass.config_entries.flow.async_configure(
+        reconfigure_result["flow_id"],
+        {
+            CONF_NAME: DEFAULT_NAME,
+            CONF_ORIGIN: "location3",
+            CONF_DESTINATION: "location4",
+            CONF_REGION: "us",
+        },
+    )
+    assert user_step_result["type"] is FlowResultType.ABORT
+    assert user_step_result["reason"] == "reconfigure_successful"
+    await hass.async_block_till_done()
+
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    assert entry.data == {
+        CONF_NAME: DEFAULT_NAME,
+        CONF_ORIGIN: "location3",
+        CONF_DESTINATION: "location4",
+        CONF_REGION: "US",
+    }
+
+
 async def test_options(hass: HomeAssistant) -> None:
     """Test options flow."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         data=MOCK_CONFIG,
         options=DEFAULT_OPTIONS,
+        version=WazeConfigFlow.VERSION,
     )
     entry.add_to_hass(hass)
     await hass.config_entries.async_setup(entry.entry_id)
@@ -75,8 +116,8 @@ async def test_options(hass: HomeAssistant) -> None:
             CONF_AVOID_FERRIES: True,
             CONF_AVOID_SUBSCRIPTION_ROADS: True,
             CONF_AVOID_TOLL_ROADS: True,
-            CONF_EXCL_FILTER: "exclude",
-            CONF_INCL_FILTER: "include",
+            CONF_EXCL_FILTER: ["exclude"],
+            CONF_INCL_FILTER: ["include"],
             CONF_REALTIME: False,
             CONF_UNITS: IMPERIAL_UNITS,
             CONF_VEHICLE_TYPE: "taxi",
@@ -88,8 +129,8 @@ async def test_options(hass: HomeAssistant) -> None:
         CONF_AVOID_FERRIES: True,
         CONF_AVOID_SUBSCRIPTION_ROADS: True,
         CONF_AVOID_TOLL_ROADS: True,
-        CONF_EXCL_FILTER: "exclude",
-        CONF_INCL_FILTER: "include",
+        CONF_EXCL_FILTER: ["exclude"],
+        CONF_INCL_FILTER: ["include"],
         CONF_REALTIME: False,
         CONF_UNITS: IMPERIAL_UNITS,
         CONF_VEHICLE_TYPE: "taxi",
@@ -99,8 +140,8 @@ async def test_options(hass: HomeAssistant) -> None:
         CONF_AVOID_FERRIES: True,
         CONF_AVOID_SUBSCRIPTION_ROADS: True,
         CONF_AVOID_TOLL_ROADS: True,
-        CONF_EXCL_FILTER: "exclude",
-        CONF_INCL_FILTER: "include",
+        CONF_EXCL_FILTER: ["exclude"],
+        CONF_INCL_FILTER: ["include"],
         CONF_REALTIME: False,
         CONF_UNITS: IMPERIAL_UNITS,
         CONF_VEHICLE_TYPE: "taxi",
@@ -165,10 +206,14 @@ async def test_invalid_config_entry(
 async def test_reset_filters(hass: HomeAssistant) -> None:
     """Test resetting inclusive and exclusive filters to empty string."""
     options = {**DEFAULT_OPTIONS}
-    options[CONF_INCL_FILTER] = "test"
-    options[CONF_EXCL_FILTER] = "test"
+    options[CONF_INCL_FILTER] = ["test"]
+    options[CONF_EXCL_FILTER] = ["test"]
     config_entry = MockConfigEntry(
-        domain=DOMAIN, data=MOCK_CONFIG, options=options, entry_id="test"
+        domain=DOMAIN,
+        data=MOCK_CONFIG,
+        options=options,
+        entry_id="test",
+        version=WazeConfigFlow.VERSION,
     )
     config_entry.add_to_hass(hass)
     await hass.config_entries.async_setup(config_entry.entry_id)
@@ -184,8 +229,6 @@ async def test_reset_filters(hass: HomeAssistant) -> None:
             CONF_AVOID_FERRIES: True,
             CONF_AVOID_SUBSCRIPTION_ROADS: True,
             CONF_AVOID_TOLL_ROADS: True,
-            CONF_EXCL_FILTER: "",
-            CONF_INCL_FILTER: "",
             CONF_REALTIME: False,
             CONF_UNITS: IMPERIAL_UNITS,
             CONF_VEHICLE_TYPE: "taxi",
@@ -196,8 +239,8 @@ async def test_reset_filters(hass: HomeAssistant) -> None:
         CONF_AVOID_FERRIES: True,
         CONF_AVOID_SUBSCRIPTION_ROADS: True,
         CONF_AVOID_TOLL_ROADS: True,
-        CONF_EXCL_FILTER: "",
-        CONF_INCL_FILTER: "",
+        CONF_EXCL_FILTER: [""],
+        CONF_INCL_FILTER: [""],
         CONF_REALTIME: False,
         CONF_UNITS: IMPERIAL_UNITS,
         CONF_VEHICLE_TYPE: "taxi",

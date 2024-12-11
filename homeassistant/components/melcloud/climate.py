@@ -115,7 +115,6 @@ class MelCloudClimate(ClimateEntity):
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_has_entity_name = True
     _attr_name = None
-    _enable_turn_on_off_backwards_compatibility = False
 
     def __init__(self, device: MelCloudDevice) -> None:
         """Initialize the climate."""
@@ -330,12 +329,11 @@ class AtwDeviceZoneClimate(MelCloudClimate):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return the optional state attributes with device specific additions."""
-        data = {
+        return {
             ATTR_STATUS: ATW_ZONE_HVAC_MODE_LOOKUP.get(
                 self._zone.status, self._zone.status
             )
         }
-        return data
 
     @property
     def hvac_mode(self) -> HVACMode:

@@ -7,8 +7,8 @@ import socket
 from unittest.mock import patch
 
 import pytest
-from pyunifiprotect import NotAuthorized, NvrError, ProtectApiClient
-from pyunifiprotect.data import NVR, Bootstrap, CloudAccount
+from uiprotect import NotAuthorized, NvrError, ProtectApiClient
+from uiprotect.data import NVR, Bootstrap, CloudAccount
 
 from homeassistant import config_entries
 from homeassistant.components import dhcp, ssdp
@@ -18,6 +18,7 @@ from homeassistant.components.unifiprotect.const import (
     CONF_OVERRIDE_CHOST,
     DOMAIN,
 )
+from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
@@ -223,13 +224,7 @@ async def test_form_reauth_auth(
     )
     mock_config.add_to_hass(hass)
 
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN,
-        context={
-            "source": config_entries.SOURCE_REAUTH,
-            "entry_id": mock_config.entry_id,
-        },
-    )
+    result = await mock_config.start_reauth_flow(hass)
     assert result["type"] is FlowResultType.FORM
     assert not result["errors"]
     flows = hass.config_entries.flow.async_progress_by_handler(DOMAIN)
@@ -307,7 +302,7 @@ async def test_form_options(hass: HomeAssistant, ufp_client: ProtectApiClient) -
 
         await hass.config_entries.async_setup(mock_config.entry_id)
         await hass.async_block_till_done()
-        assert mock_config.state == config_entries.ConfigEntryState.LOADED
+        assert mock_config.state is ConfigEntryState.LOADED
 
         result = await hass.config_entries.options.async_init(mock_config.entry_id)
         assert result["type"] is FlowResultType.FORM
@@ -331,6 +326,7 @@ async def test_form_options(hass: HomeAssistant, ufp_client: ProtectApiClient) -
             "max_media": 1000,
             "allow_ea_channel": False,
         }
+        await hass.async_block_till_done()
         await hass.config_entries.async_unload(mock_config.entry_id)
 
 
