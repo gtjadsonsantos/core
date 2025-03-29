@@ -28,9 +28,8 @@ from homeassistant.exceptions import (
     ConfigEntryNotReady,
     HomeAssistantError,
 )
-from homeassistant.helpers import config_entry_oauth2_flow
+from homeassistant.helpers import config_entry_oauth2_flow, config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import generate_entity_id
 
 from .api import ApiAuthImpl, get_feature_access
@@ -277,10 +276,10 @@ async def async_setup_add_event_service(
         elif EVENT_START_DATETIME in call.data and EVENT_END_DATETIME in call.data:
             start_dt = call.data[EVENT_START_DATETIME]
             end_dt = call.data[EVENT_END_DATETIME]
-            start = DateOrDatetime(  # type: ignore[call-arg]
+            start = DateOrDatetime(
                 date_time=start_dt, timezone=str(hass.config.time_zone)
             )
-            end = DateOrDatetime(date_time=end_dt, timezone=str(hass.config.time_zone))  # type: ignore[call-arg]
+            end = DateOrDatetime(date_time=end_dt, timezone=str(hass.config.time_zone))
 
         if start is None or end is None:
             raise ValueError(

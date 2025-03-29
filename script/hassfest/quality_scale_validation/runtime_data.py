@@ -8,9 +8,9 @@ import re
 
 from homeassistant.const import Platform
 from script.hassfest import ast_parse_module
-from script.hassfest.model import Integration
+from script.hassfest.model import Config, Integration
 
-_ANNOTATION_MATCH = re.compile(r"^[A-Za-z]+ConfigEntry$")
+_ANNOTATION_MATCH = re.compile(r"^[A-Za-z][A-Za-z0-9]+ConfigEntry$")
 _FUNCTIONS: dict[str, dict[str, int]] = {
     "__init__": {  # based on ComponentProtocol
         "async_migrate_entry": 2,
@@ -102,7 +102,9 @@ def _check_typed_config_entry(integration: Integration) -> list[str]:
     return errors
 
 
-def validate(integration: Integration, *, rules_done: set[str]) -> list[str] | None:
+def validate(
+    config: Config, integration: Integration, *, rules_done: set[str]
+) -> list[str] | None:
     """Validate correct use of ConfigEntry.runtime_data."""
     init_file = integration.path / "__init__.py"
     init = ast_parse_module(init_file)
