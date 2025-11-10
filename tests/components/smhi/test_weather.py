@@ -5,7 +5,12 @@ from unittest.mock import MagicMock
 
 from freezegun import freeze_time
 from freezegun.api import FrozenDateTimeFactory
-from pysmhi import SMHIForecast, SmhiForecastException, SMHIPointForecast
+from pysmhi import (
+    SMHIFirePointForecast,
+    SMHIForecast,
+    SmhiForecastException,
+    SMHIPointForecast,
+)
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
@@ -65,6 +70,7 @@ async def test_setup_hass(
 async def test_clear_night(
     hass: HomeAssistant,
     mock_client: SMHIPointForecast,
+    mock_fire_client: SMHIFirePointForecast,
     snapshot: SnapshotAssertion,
 ) -> None:
     """Test for successfully setting up the smhi integration."""
@@ -102,6 +108,7 @@ async def test_properties_no_data(
     hass: HomeAssistant,
     load_int: MockConfigEntry,
     mock_client: MagicMock,
+    mock_fire_client: SMHIFirePointForecast,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test properties when no API data available."""
@@ -135,7 +142,8 @@ async def test_properties_no_data(
 
 async def test_properties_unknown_symbol(
     hass: HomeAssistant,
-    mock_client: MagicMock,
+    mock_client: SMHIPointForecast,
+    mock_fire_client: SMHIFirePointForecast,
 ) -> None:
     """Test behaviour when unknown symbol from API."""
     data = SMHIForecast(
@@ -244,7 +252,8 @@ async def test_refresh_weather_forecast_retry(
     hass: HomeAssistant,
     error: Exception,
     load_int: MockConfigEntry,
-    mock_client: MagicMock,
+    mock_client: SMHIPointForecast,
+    mock_fire_client: SMHIFirePointForecast,
     freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test the refresh weather forecast function."""
@@ -469,6 +478,26 @@ async def test_forecast_service(
         WEATHER_DOMAIN,
         SERVICE_GET_FORECASTS,
         {"entity_id": ENTITY_ID, "type": "daily"},
+        blocking=True,
+        return_response=True,
+    )
+    assert response == snapshot
+
+
+@pytest.mark.parametrize(
+    "load_platforms",
+    [[Platform.WEATHER]],
+)
+async def test_twice_daily_forecast_service(
+    hass: HomeAssistant,
+    load_int: MockConfigEntry,
+    snapshot: SnapshotAssertion,
+) -> None:
+    """Test forecast service."""
+    response = await hass.services.async_call(
+        WEATHER_DOMAIN,
+        SERVICE_GET_FORECASTS,
+        {"entity_id": ENTITY_ID, "type": "twice_daily"},
         blocking=True,
         return_response=True,
     )
